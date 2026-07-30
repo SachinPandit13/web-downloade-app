@@ -51,7 +51,7 @@ export default function Landing() {
             </h1>
             <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">
               Paste a video URL, choose quality and format, and download
-              instantly. No bloat, no ads — just a fast, private, beautiful
+              instantly. No bloat, no ads - just a fast, private, beautiful
               experience.
             </p>
 
