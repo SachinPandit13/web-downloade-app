@@ -17,7 +17,7 @@ const links = [
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  
+
   return (
     <header className="sticky top-0 z-50 w-full">
       <div className="glass-strong border-b border-border/60">
@@ -33,7 +33,8 @@ export default function Navbar() {
 
           <nav className="hidden md:flex items-center gap-1">
             {links.map((l) => {
-              const isActive = l.to === "/" ? pathname === "/" : pathname?.startsWith(l.to);
+              const isActive =
+                l.to === "/" ? pathname === "/" : pathname?.startsWith(l.to);
               return (
                 <Link
                   key={l.to}
