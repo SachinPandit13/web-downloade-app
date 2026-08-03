@@ -10,8 +10,6 @@ const links = [
   { to: "/analyzer", label: "Analyzer" },
   { to: "/downloads", label: "Downloads" },
   { to: "/history", label: "History" },
-  { to: "/profile", label: "Profile" },
-  { to: "/settings", label: "Settings" },
 ] as const;
 
 export default function Navbar() {
