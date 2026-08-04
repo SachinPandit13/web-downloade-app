@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import Navbar from "@/src/components/site/Navbar";
+import Navbar from "@/src/components/site/Header";
 import Footer from "@/src/components/site/Footer";
 import "./globals.css";
 
@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VideoVault - Download videos from your favorite platforms",
+  title: "VideoVault | Download videos from your favorite platforms",
   description:
     "Paste a video URL, choose quality and format, and download instantly.",
 };

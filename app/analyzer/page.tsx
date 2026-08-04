@@ -58,8 +58,13 @@ function AnalyzerContent() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
-  const { status: jobStatus, cancel, isActive } = useDownloadJob(jobId, {
-    enabled: phase === "downloading" || phase === "complete" || phase === "failed",
+  const {
+    status: jobStatus,
+    cancel,
+    isActive,
+  } = useDownloadJob(jobId, {
+    enabled:
+      phase === "downloading" || phase === "complete" || phase === "failed",
     onComplete: () => setPhase("complete"),
     onFailed: () => setPhase("failed"),
   });
@@ -74,7 +79,9 @@ function AnalyzerContent() {
       .then(setOptions)
       .catch((err) => {
         toast.error(
-          err instanceof ApiError ? err.message : "Failed to load download options",
+          err instanceof ApiError
+            ? err.message
+            : "Failed to load download options",
         );
       });
   }, []);
@@ -283,9 +290,7 @@ function AnalyzerContent() {
                       <Calendar className="h-3 w-3" /> Posted
                     </div>
                     <div className="mt-0.5 font-mono">
-                      {video.upload_date
-                        ? formatDate(video.upload_date)
-                        : "—"}
+                      {video.upload_date ? formatDate(video.upload_date) : "—"}
                     </div>
                   </div>
                 </div>
@@ -323,8 +328,7 @@ function AnalyzerContent() {
                 <h3 className="text-sm font-semibold">Format</h3>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {formats.map((f) => {
-                    const Icon =
-                      f === "MP3" || f === "AAC" ? Music : VideoIcon;
+                    const Icon = f === "MP3" || f === "AAC" ? Music : VideoIcon;
                     return (
                       <button
                         key={f}

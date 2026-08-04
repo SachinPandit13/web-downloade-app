@@ -10,11 +10,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  listDownloads,
-  getDownloadFileUrl,
-  ApiError,
-} from "@/src/lib/api";
+import { listDownloads, getDownloadFileUrl, ApiError } from "@/src/lib/api";
 import type { DownloadListItem } from "@/src/lib/api";
 import { formatEta, formatSpeed } from "@/src/lib/formatters";
 import { useDownloadJob } from "@/src/hooks/useDownloadJob";
@@ -96,9 +92,7 @@ function ActiveJobCard({
               <span>ETA: {formatEta(eta)}</span>
             </div>
           )}
-          {error && (
-            <p className="mt-2 text-xs text-destructive">{error}</p>
-          )}
+          {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
         </div>
       </div>
       <div className="mt-4 flex gap-2">
