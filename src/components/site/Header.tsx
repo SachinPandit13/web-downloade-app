@@ -52,12 +52,12 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
-            <Link
+            {/* <Link
               href="/analyzer"
               className="inline-flex items-center gap-2 rounded-lg gradient-primary px-4 py-2 text-sm font-semibold text-white glow-primary hover:opacity-95 transition"
             >
               Start Downloading
-            </Link>
+            </Link> */}
           </div>
 
           <div className="flex md:hidden items-center gap-2">
