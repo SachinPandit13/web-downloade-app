@@ -4,7 +4,7 @@ import { PLATFORMS } from "@/src/lib/mockData";
 
 export default function PlatformsSection() {
   return (
-    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-16 sm:mt-24">
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-10 sm:mt-12">
       <div className="text-center max-w-2xl mx-auto">
         <p className="text-sm font-semibold text-accent">Supported platforms</p>
         <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
