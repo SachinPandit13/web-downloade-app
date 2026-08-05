@@ -84,13 +84,13 @@ export default function Navbar() {
                 {l.label}
               </Link>
             ))}
-            <Link
+            {/* <Link
               href="/analyzer"
               onClick={() => setOpen(false)}
               className="block mt-2 text-center rounded-lg gradient-primary px-4 py-2.5 text-sm font-semibold text-white"
             >
               Start Downloading
-            </Link>
+            </Link> */}
           </div>
         )}
       </div>
