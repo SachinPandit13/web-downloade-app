@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronDown, Clipboard } from "lucide-react";
-import Particles from "@/src/components/site/Particles";
+import { motion } from "framer-motion";
 import { PlatformIcon } from "@/src/components/site/PlatformIcon";
 import { PLATFORMS } from "@/src/lib/mockData";
 
@@ -12,25 +12,45 @@ export default function HeroSection() {
 
   return (
     <section className="relative overflow-hidden">
-      <Particles />
-      <div className="absolute inset-x-0 top-0 -z-10 h-[600px] bg-[radial-gradient(ellipse_at_top,oklch(0.62_0.205_280/0.25),transparent_60%)]" />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-24 sm:pt-28">
-        <div className="text-center max-w-3xl mx-auto animate-fade-up">
-          <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs font-medium text-muted-foreground">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-6 sm:pt-12">
+        <div className="text-center max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs font-medium text-muted-foreground"
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-glow" />
             7 platforms supported · 4K downloads
-          </div>
-          <h1 className="mt-6 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mt-6 font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]"
+          >
             Download videos from <br className="hidden sm:block" />
-            <span className="gradient-text">your favorite platforms</span>
-          </h1>
-          <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">
+            <span className="gradient-text-animated">
+              your favorite platforms
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto"
+          >
             Paste a video URL, choose quality and format, and download
             instantly. No bloat, no ads - just a fast, private, beautiful
             experience.
-          </p>
+          </motion.p>
 
-          <form
+          <motion.form
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
             onSubmit={(e) => {
               e.preventDefault();
             }}
@@ -65,7 +85,7 @@ export default function HeroSection() {
             <p className="mt-3 text-xs text-muted-foreground">
               Free for personal use. Respect creators' rights.
             </p>
-          </form>
+          </motion.form>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
