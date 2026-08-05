@@ -6,7 +6,6 @@ import { ArrowRight, ChevronDown, Clipboard } from "lucide-react";
 import Particles from "@/src/components/site/Particles";
 import { PlatformIcon } from "@/src/components/site/PlatformIcon";
 import { PLATFORMS } from "@/src/lib/mockData";
-import DownloadPreviewCard from "@/src/components/site/DownloadPreviewCard";
 
 export default function HeroSection() {
   const [url, setUrl] = useState("");
@@ -95,8 +94,6 @@ export default function HeroSection() {
             ))}
           </div>
         </div>
-
-        <DownloadPreviewCard />
       </div>
     </section>
   );
