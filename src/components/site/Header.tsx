@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Download, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { ThemeToggle } from "@/src/components/ui";
 
 const links = [
   { to: "/", label: "Home" },
@@ -49,7 +50,8 @@ export default function Navbar() {
             })}
           </nav>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             <Link
               href="/analyzer"
               className="inline-flex items-center gap-2 rounded-lg gradient-primary px-4 py-2 text-sm font-semibold text-white glow-primary hover:opacity-95 transition"
@@ -58,13 +60,16 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <button
-            onClick={() => setOpen(!open)}
-            className="md:hidden grid h-9 w-9 place-items-center rounded-lg border border-border"
-            aria-label="Toggle menu"
-          >
-            {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </button>
+          <div className="flex md:hidden items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setOpen(!open)}
+              className="grid h-9 w-9 place-items-center rounded-lg border border-border"
+              aria-label="Toggle menu"
+            >
+              {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
 
         {open && (
