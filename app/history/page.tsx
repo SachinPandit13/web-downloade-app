@@ -29,7 +29,7 @@ import {
   type DisplayStatus,
 } from "@/src/lib/formatters";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 const statusStyles: Record<
   DisplayStatus,
@@ -69,9 +69,7 @@ export default function HistoryPage() {
     setLoading(true);
     try {
       const apiStatus =
-        status !== "all"
-          ? API_STATUS_MAP[status as DisplayStatus]
-          : undefined;
+        status !== "all" ? API_STATUS_MAP[status as DisplayStatus] : undefined;
       const response = await listDownloads({
         page,
         page_size: PAGE_SIZE,
@@ -131,9 +129,7 @@ export default function HistoryPage() {
           disabled={loading}
           className="inline-flex items-center gap-2 rounded-lg border border-border bg-white/5 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
         >
-          <RefreshCw
-            className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-          />
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </button>
       </div>
