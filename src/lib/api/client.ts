@@ -1,5 +1,8 @@
+import axios from "axios";
+
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
+  "http://localhost:8000";
 
 export class ApiError extends Error {
   constructor(
@@ -10,6 +13,13 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
+
+export const apiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 function parseErrorMessage(body: unknown, status: number): string {
   if (body && typeof body === "object" && "detail" in body) {
@@ -28,38 +38,68 @@ function parseErrorMessage(body: unknown, status: number): string {
   return `Request failed with status ${status}`;
 }
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        return Promise.reject(
+          new ApiError(
+            parseErrorMessage(error.response.data, error.response.status),
+            error.response.status,
+          ),
+        );
+      }
+    }
+    return Promise.reject(
+      new ApiError("Cannot reach server. Is the API running?", 0),
+    );
+  },
+);
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const url = `${API_URL}${path}`;
-  const headers: HeadersInit = {
-    ...(options.body ? { "Content-Type": "application/json" } : {}),
-    ...options.headers,
-  };
-
-  let response: Response;
-  try {
-    response = await fetch(url, { ...options, headers });
-  } catch {
-    throw new ApiError(
-      "Cannot reach server. Is the API running?",
-      0,
-    );
+  let data: unknown = undefined;
+  if (options.body) {
+    if (typeof options.body === "string") {
+      try {
+        data = JSON.parse(options.body);
+      } catch {
+        data = options.body;
+      }
+    } else {
+      data = options.body;
+    }
   }
+
+  let headers: Record<string, string> | undefined;
+  if (options.headers) {
+    if (options.headers instanceof Headers) {
+      headers = {};
+      options.headers.forEach((value, key) => {
+        headers![key] = value;
+      });
+    } else if (Array.isArray(options.headers)) {
+      headers = Object.fromEntries(options.headers);
+    } else {
+      headers = options.headers as Record<string, string>;
+    }
+  }
+
+  const response = await apiClient.request<T>({
+    url: path,
+    method: options.method || "GET",
+    data,
+    headers,
+  });
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  const text = await response.text();
-  const body = text ? JSON.parse(text) : null;
-
-  if (!response.ok) {
-    throw new ApiError(parseErrorMessage(body, response.status), response.status);
-  }
-
-  return body as T;
+  return response.data;
 }
 
 export function getApiBaseUrl(): string {

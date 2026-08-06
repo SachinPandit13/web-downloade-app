@@ -1,4 +1,4 @@
-import { apiFetch, getApiBaseUrl } from "./client";
+import { apiClient, getApiBaseUrl } from "./client";
 import type {
   DownloadListResponse,
   DownloadStartResponse,
@@ -8,48 +8,50 @@ import type {
   VideoFormat,
 } from "./types";
 
-export function getOptions(): Promise<SupportedOptionsResponse> {
-  return apiFetch<SupportedOptionsResponse>("/api/v1/downloads/options");
+export async function getOptions(): Promise<SupportedOptionsResponse> {
+  const response = await apiClient.get<SupportedOptionsResponse>(
+    "/api/v1/downloads/options",
+  );
+  return response.data;
 }
 
-export function createDownload(body: {
+export async function createDownload(body: {
   url: string;
   format: VideoFormat;
   quality: string;
 }): Promise<DownloadStartResponse> {
-  return apiFetch<DownloadStartResponse>("/api/v1/downloads", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+  const response = await apiClient.post<DownloadStartResponse>(
+    "/api/v1/downloads",
+    body,
+  );
+  return response.data;
 }
 
-export function getDownloadStatus(
+export async function getDownloadStatus(
   jobId: string,
 ): Promise<DownloadStatusResponse> {
-  return apiFetch<DownloadStatusResponse>(`/api/v1/downloads/${jobId}`);
+  const response = await apiClient.get<DownloadStatusResponse>(
+    `/api/v1/downloads/${jobId}`,
+  );
+  return response.data;
 }
 
-export function listDownloads(params?: {
+export async function listDownloads(params?: {
   page?: number;
   page_size?: number;
   status?: DownloadStatus;
 }): Promise<DownloadListResponse> {
-  const search = new URLSearchParams();
-  if (params?.page) search.set("page", String(params.page));
-  if (params?.page_size) search.set("page_size", String(params.page_size));
-  if (params?.status) search.set("status", params.status);
-  const qs = search.toString();
-  return apiFetch<DownloadListResponse>(
-    `/api/v1/downloads${qs ? `?${qs}` : ""}`,
+  const response = await apiClient.get<DownloadListResponse>(
+    "/api/v1/downloads",
+    { params },
   );
+  return response.data;
 }
 
 export function getDownloadFileUrl(jobId: string): string {
   return `${getApiBaseUrl()}/api/v1/downloads/${jobId}/file`;
 }
 
-export function cancelDownload(jobId: string): Promise<void> {
-  return apiFetch<void>(`/api/v1/downloads/${jobId}`, {
-    method: "DELETE",
-  });
+export async function cancelDownload(jobId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/downloads/${jobId}`);
 }
