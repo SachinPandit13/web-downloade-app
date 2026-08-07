@@ -147,8 +147,8 @@ export const DOWNLOAD_HISTORY: DownloadItem[] = Array.from(
     thumbnail: thumbs[i % thumbs.length],
     format: ["MP4", "WEBM", "MP3"][i % 3],
     quality: ["1080p", "720p", "320kbps", "2160p"][i % 4],
-    size: `${(Math.random() * 400 + 30).toFixed(1)} MB`,
-    date: new Date(Date.now() - i * 86400000 * 1.3).toISOString(),
+    size: `${(((i * 37) % 400) + 30).toFixed(1)} MB`,
+    date: new Date(1770000000000 - i * 86400000 * 1.3).toISOString(),
     status: statuses[i % statuses.length],
   }),
 );

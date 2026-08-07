@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import Navbar from "@/src/components/site/Header";
-import Footer from "@/src/components/site/Footer";
 import Particles from "@/src/components/site/Particles";
 import { ThemeProvider } from "@/src/components/ui";
 import "./globals.css";
@@ -53,7 +52,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col relative overflow-x-hidden">
+      <body
+        className="min-h-full flex flex-col relative overflow-x-hidden"
+        suppressHydrationWarning
+      >
         <ThemeProvider>
           <div
             aria-hidden

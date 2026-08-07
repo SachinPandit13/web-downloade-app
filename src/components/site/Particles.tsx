@@ -1,8 +1,22 @@
-import { useMemo } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface Dot {
+  id: number;
+  left: number;
+  top: number;
+  size: number;
+  delay: number;
+  duration: number;
+  hue: string;
+}
 
 export default function Particles({ count = 28 }: { count?: number }) {
-  const dots = useMemo(
-    () =>
+  const [dots, setDots] = useState<Dot[]>([]);
+
+  useEffect(() => {
+    setDots(
       Array.from({ length: count }, (_, i) => ({
         id: i,
         left: Math.random() * 100,
@@ -12,8 +26,11 @@ export default function Particles({ count = 28 }: { count?: number }) {
         duration: 6 + Math.random() * 8,
         hue: Math.random() > 0.5 ? "var(--primary)" : "var(--accent)",
       })),
-    [count],
-  );
+    );
+  }, [count]);
+
+  if (dots.length === 0) return null;
+
   return (
     <div
       aria-hidden
@@ -39,3 +56,4 @@ export default function Particles({ count = 28 }: { count?: number }) {
     </div>
   );
 }
+
