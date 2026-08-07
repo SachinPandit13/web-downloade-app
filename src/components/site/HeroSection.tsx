@@ -60,6 +60,16 @@ export default function HeroSection() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
+  const triggerFileDownload = useCallback((id: string) => {
+    const fileUrl = getDownloadFileUrl(id);
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
   const {
     status: jobStatus,
     cancel,
@@ -67,7 +77,13 @@ export default function HeroSection() {
   } = useDownloadJob(jobId, {
     enabled:
       phase === "downloading" || phase === "complete" || phase === "failed",
-    onComplete: () => setPhase("complete"),
+    onComplete: (statusResp) => {
+      setPhase("complete");
+      if (statusResp?.job_id) {
+        triggerFileDownload(statusResp.job_id);
+        toast.success("Download complete! File saved.");
+      }
+    },
     onFailed: () => setPhase("failed"),
   });
 
@@ -322,10 +338,13 @@ export default function HeroSection() {
                             <button
                               key={q}
                               type="button"
-                              disabled={
-                                phase === "downloading" || phase === "complete"
-                              }
-                              onClick={() => setQuality(q)}
+                              disabled={phase === "downloading" || isStarting}
+                              onClick={() => {
+                                setQuality(q);
+                                if (phase === "complete" || phase === "failed") {
+                                  setPhase("ready");
+                                }
+                              }}
                               className={`rounded-xl border py-2 text-xs font-mono font-semibold transition cursor-pointer ${
                                 quality === q
                                   ? "border-primary bg-primary/15 text-foreground glow-primary"
@@ -350,11 +369,16 @@ export default function HeroSection() {
                               <button
                                 key={f}
                                 type="button"
-                                disabled={
-                                  phase === "downloading" ||
-                                  phase === "complete"
-                                }
-                                onClick={() => setFormat(f as VideoFormat)}
+                                disabled={phase === "downloading" || isStarting}
+                                onClick={() => {
+                                  setFormat(f as VideoFormat);
+                                  if (
+                                    phase === "complete" ||
+                                    phase === "failed"
+                                  ) {
+                                    setPhase("ready");
+                                  }
+                                }}
                                 className={`flex items-center justify-center gap-1.5 rounded-xl border py-2 px-1 text-xs font-mono font-semibold transition cursor-pointer ${
                                   format === f
                                     ? "border-primary bg-primary/15 text-foreground glow-primary"
@@ -370,24 +394,101 @@ export default function HeroSection() {
 
                       <div className="pt-2">
                         <AnimatePresence mode="wait" initial={false}>
-                          {phase === "ready" && (
+                          {phase === "downloading" ? (
                             <motion.div
-                              key="ready-btn"
-                              initial={{ opacity: 0, y: 6 }}
+                              key="downloading-cta"
+                              initial={{ opacity: 0, y: 4 }}
                               animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -6 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.2 }}
+                              className="relative overflow-hidden rounded-2xl border border-primary/40 bg-foreground/5 p-3 backdrop-blur-md"
+                            >
+                              {/* Animated Progress Bar Fill */}
+                              <div
+                                className="absolute inset-y-0 left-0 bg-primary/25 transition-all duration-300 pointer-events-none"
+                                style={{
+                                  width: `${Math.min(100, Math.max(5, progress))}%`,
+                                }}
+                              />
+                              <div className="relative z-10 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                                  <div className="min-w-0 text-xs">
+                                    <span className="font-semibold text-foreground">
+                                      Downloading… {Math.min(100, Math.round(progress))}%
+                                    </span>
+                                    <span className="text-muted-foreground ml-2 hidden sm:inline">
+                                      {formatSpeed(
+                                        jobStatus?.speed_bytes_per_sec,
+                                      )}{" "}
+                                      · {formatEta(jobStatus?.eta_seconds)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleCancel()}
+                                  className="rounded-xl bg-white/10 hover:bg-white/20 text-muted-foreground hover:text-foreground px-3 py-1.5 text-xs font-semibold transition cursor-pointer shrink-0"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </motion.div>
+                          ) : phase === "complete" && jobId ? (
+                            <motion.div
+                              key="complete-cta"
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.2 }}
+                              className="flex gap-2"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (jobId) triggerFileDownload(jobId);
+                                }}
+                                className="flex-1 rounded-2xl gradient-primary py-3 px-4 text-sm font-semibold text-white glow-primary flex items-center justify-center gap-2 shadow-xl hover:opacity-95 transition cursor-pointer"
+                              >
+                                <Download className="h-4.5 w-4.5" /> Save File Again ({format} · {quality})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void startDownload()}
+                                disabled={isStarting}
+                                title="Download again with current format/quality"
+                                className="rounded-2xl border border-border/80 bg-white/5 px-4 py-3 text-xs font-medium text-foreground hover:bg-white/10 transition cursor-pointer shrink-0"
+                              >
+                                Re-download
+                              </button>
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="ready-cta"
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
                               transition={{ duration: 0.2 }}
                             >
                               <button
                                 type="button"
                                 onClick={() => void startDownload()}
                                 disabled={isStarting}
-                                className="w-full rounded-2xl gradient-primary py-3 text-sm font-semibold text-white glow-primary flex items-center justify-center gap-2 shadow-xl hover:opacity-95 transition cursor-pointer disabled:opacity-60"
+                                className={`w-full rounded-2xl py-3 text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60 ${
+                                  phase === "failed"
+                                    ? "border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/15"
+                                    : "gradient-primary text-white glow-primary shadow-xl hover:opacity-95"
+                                }`}
                               >
                                 {isStarting ? (
                                   <>
                                     <Loader2 className="h-4.5 w-4.5 animate-spin" />{" "}
                                     Starting…
+                                  </>
+                                ) : phase === "failed" ? (
+                                  <>
+                                    <XCircle className="h-4.5 w-4.5 text-destructive" />{" "}
+                                    Failed — Retry Download ({format} · {quality})
                                   </>
                                 ) : (
                                   <>
@@ -396,120 +497,6 @@ export default function HeroSection() {
                                   </>
                                 )}
                               </button>
-                            </motion.div>
-                          )}
-
-                          {(phase === "downloading" ||
-                            phase === "complete" ||
-                            phase === "failed") && (
-                            <motion.div
-                              key="progress-card"
-                              initial={{ opacity: 0, y: 8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -8 }}
-                              transition={{ duration: 0.25 }}
-                              className="rounded-2xl border border-border/80 bg-foreground/5 p-4 space-y-3"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold flex items-center gap-1.5">
-                                  {phase === "complete" ? (
-                                    <CheckCircle2 className="h-4 w-4 text-success" />
-                                  ) : phase === "failed" ? (
-                                    <XCircle className="h-4 w-4 text-destructive" />
-                                  ) : (
-                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                  )}
-                                  {phase === "complete"
-                                    ? "Completed"
-                                    : phase === "failed"
-                                      ? "Failed"
-                                      : "Processing"}
-                                </span>
-                                <span className="text-xs font-mono text-muted-foreground">
-                                  {Math.min(100, Math.round(progress))}%
-                                </span>
-                              </div>
-
-                              <div className="h-2 overflow-hidden rounded-full bg-foreground/10">
-                                <div
-                                  className="h-full gradient-primary transition-all duration-300"
-                                  style={{ width: `${Math.min(100, progress)}%` }}
-                                />
-                              </div>
-
-                              {jobStatus?.error && phase === "failed" && (
-                                <p className="text-xs text-destructive">
-                                  {jobStatus.error}
-                                </p>
-                              )}
-
-                              <div className="grid grid-cols-3 gap-2 text-[10px] font-mono text-muted-foreground">
-                                <div>
-                                  <div>Speed</div>
-                                  <div className="font-semibold text-foreground mt-0.5">
-                                    {phase === "complete"
-                                      ? "—"
-                                      : formatSpeed(
-                                          jobStatus?.speed_bytes_per_sec,
-                                        )}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div>ETA</div>
-                                  <div className="font-semibold text-foreground mt-0.5">
-                                    {phase === "complete"
-                                      ? "Done"
-                                      : formatEta(jobStatus?.eta_seconds)}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div>Size</div>
-                                  <div className="font-semibold text-foreground mt-0.5">
-                                    {formatBytes(jobStatus?.file_size_bytes)}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="pt-2 flex gap-2">
-                                {phase === "complete" && jobId && (
-                                  <a
-                                    href={getDownloadFileUrl(jobId)}
-                                    download
-                                    className="flex-1 text-center rounded-xl gradient-primary py-2.5 text-xs font-semibold text-white shadow-md hover:opacity-95 transition"
-                                  >
-                                    Save file
-                                  </a>
-                                )}
-                                {isActive && (
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleCancel()}
-                                    className="flex-1 rounded-xl border border-border bg-foreground/5 py-2.5 text-xs font-medium hover:bg-foreground/10 transition cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
-                                {phase === "failed" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setJobId(null);
-                                      setPhase("ready");
-                                    }}
-                                    className="flex-1 rounded-xl border border-border bg-foreground/5 py-2.5 text-xs font-medium hover:bg-foreground/10 transition cursor-pointer"
-                                  >
-                                    Try again
-                                  </button>
-                                )}
-                                {phase === "complete" && (
-                                  <Link
-                                    href="/history"
-                                    className="flex-1 text-center rounded-xl border border-border bg-foreground/5 py-2.5 text-xs font-medium hover:bg-foreground/10 transition"
-                                  >
-                                    View history
-                                  </Link>
-                                )}
-                              </div>
                             </motion.div>
                           )}
                         </AnimatePresence>

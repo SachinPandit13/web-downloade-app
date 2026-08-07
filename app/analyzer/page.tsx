@@ -58,6 +58,16 @@ function AnalyzerContent() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
+  const triggerFileDownload = useCallback((id: string) => {
+    const fileUrl = getDownloadFileUrl(id);
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
   const {
     status: jobStatus,
     cancel,
@@ -65,7 +75,13 @@ function AnalyzerContent() {
   } = useDownloadJob(jobId, {
     enabled:
       phase === "downloading" || phase === "complete" || phase === "failed",
-    onComplete: () => setPhase("complete"),
+    onComplete: (statusResp) => {
+      setPhase("complete");
+      if (statusResp?.job_id) {
+        triggerFileDownload(statusResp.job_id);
+        toast.success("Download complete! File saved.");
+      }
+    },
     onFailed: () => setPhase("failed"),
   });
 
@@ -310,8 +326,13 @@ function AnalyzerContent() {
                     <button
                       key={q}
                       type="button"
-                      disabled={phase === "downloading" || phase === "complete"}
-                      onClick={() => setQuality(q)}
+                      disabled={phase === "downloading" || isStarting}
+                      onClick={() => {
+                        setQuality(q);
+                        if (phase === "complete" || phase === "failed") {
+                          setPhase("ready");
+                        }
+                      }}
                       className={`rounded-lg border px-2 py-2 text-xs font-mono transition ${
                         quality === q
                           ? "border-primary bg-primary/15 text-foreground glow-primary"
@@ -333,10 +354,13 @@ function AnalyzerContent() {
                       <button
                         key={f}
                         type="button"
-                        disabled={
-                          phase === "downloading" || phase === "complete"
-                        }
-                        onClick={() => setFormat(f as VideoFormat)}
+                        disabled={phase === "downloading" || isStarting}
+                        onClick={() => {
+                          setFormat(f as VideoFormat);
+                          if (phase === "complete" || phase === "failed") {
+                            setPhase("ready");
+                          }
+                        }}
                         className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
                           format === f
                             ? "border-primary bg-primary/15 text-foreground glow-primary"
@@ -350,16 +374,78 @@ function AnalyzerContent() {
                 </div>
               </div>
 
-              {phase === "ready" && (
+              {phase === "downloading" ? (
+                <div className="relative overflow-hidden rounded-xl border border-primary/40 bg-white/5 p-3 backdrop-blur-md">
+                  {/* Animated Progress Bar Fill */}
+                  <div
+                    className="absolute inset-y-0 left-0 bg-primary/25 transition-all duration-300 pointer-events-none"
+                    style={{
+                      width: `${Math.min(100, Math.max(5, progress))}%`,
+                    }}
+                  />
+                  <div className="relative z-10 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                      <div className="min-w-0 text-xs">
+                        <span className="font-semibold text-foreground">
+                          Downloading… {Math.min(100, Math.round(progress))}%
+                        </span>
+                        <span className="text-muted-foreground ml-2 hidden sm:inline">
+                          {formatSpeed(jobStatus?.speed_bytes_per_sec)} ·{" "}
+                          {formatEta(jobStatus?.eta_seconds)}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleCancel()}
+                      className="rounded-lg bg-white/10 hover:bg-white/20 text-muted-foreground hover:text-foreground px-3 py-1.5 text-xs font-semibold transition cursor-pointer shrink-0"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : phase === "complete" && jobId ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (jobId) triggerFileDownload(jobId);
+                    }}
+                    className="flex-1 rounded-xl gradient-primary py-3 px-4 text-sm font-semibold text-white glow-primary flex items-center justify-center gap-2 shadow-xl hover:opacity-95 transition cursor-pointer"
+                  >
+                    <Download className="h-4 w-4" /> Save File Again ({format} ·{" "}
+                    {quality})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void startDownload()}
+                    disabled={isStarting}
+                    title="Download again with current format/quality"
+                    className="rounded-xl border border-border bg-white/5 px-4 py-3 text-xs font-medium text-foreground hover:bg-white/10 transition cursor-pointer shrink-0"
+                  >
+                    Re-download
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
                   onClick={() => void startDownload()}
                   disabled={isStarting}
-                  className="w-full rounded-xl gradient-primary py-3 text-sm font-semibold text-white glow-primary flex items-center justify-center gap-2 disabled:opacity-60"
+                  className={`w-full rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60 ${
+                    phase === "failed"
+                      ? "border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/15"
+                      : "gradient-primary text-white glow-primary shadow-xl hover:opacity-95"
+                  }`}
                 >
                   {isStarting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" /> Starting…
+                    </>
+                  ) : phase === "failed" ? (
+                    <>
+                      <XCircle className="h-4 w-4 text-destructive" /> Failed —
+                      Retry Download ({format} · {quality})
                     </>
                   ) : (
                     <>
@@ -368,107 +454,6 @@ function AnalyzerContent() {
                     </>
                   )}
                 </button>
-              )}
-
-              {(phase === "downloading" ||
-                phase === "complete" ||
-                phase === "failed") && (
-                <div className="glass rounded-2xl p-5 animate-scale-in">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold flex items-center gap-2">
-                      {phase === "complete" ? (
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                      ) : phase === "failed" ? (
-                        <XCircle className="h-4 w-4 text-destructive" />
-                      ) : (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      )}
-                      {phase === "complete"
-                        ? "Completed"
-                        : phase === "failed"
-                          ? "Failed"
-                          : "Processing"}
-                    </span>
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {Math.min(100, Math.round(progress))}%
-                    </span>
-                  </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/5">
-                    <div
-                      className="h-full gradient-primary transition-all duration-300"
-                      style={{ width: `${Math.min(100, progress)}%` }}
-                    />
-                  </div>
-                  {jobStatus?.error && phase === "failed" && (
-                    <p className="mt-2 text-xs text-destructive">
-                      {jobStatus.error}
-                    </p>
-                  )}
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <div className="text-muted-foreground">Speed</div>
-                      <div className="mt-0.5 font-mono">
-                        {phase === "complete"
-                          ? "—"
-                          : formatSpeed(jobStatus?.speed_bytes_per_sec)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">ETA</div>
-                      <div className="mt-0.5 font-mono">
-                        {phase === "complete"
-                          ? "Done"
-                          : formatEta(jobStatus?.eta_seconds)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground">Size</div>
-                      <div className="mt-0.5 font-mono">
-                        {formatBytes(jobStatus?.file_size_bytes)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    {phase === "complete" && jobId && (
-                      <a
-                        href={getDownloadFileUrl(jobId)}
-                        download
-                        className="flex-1 text-center rounded-lg gradient-primary py-2 text-xs font-semibold text-white"
-                      >
-                        Save file
-                      </a>
-                    )}
-                    {isActive && (
-                      <button
-                        type="button"
-                        onClick={() => void handleCancel()}
-                        className="flex-1 rounded-lg border border-border bg-white/5 py-2 text-xs font-medium hover:bg-white/10"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                    {phase === "failed" && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setJobId(null);
-                          setPhase("ready");
-                        }}
-                        className="flex-1 rounded-lg border border-border bg-white/5 py-2 text-xs font-medium hover:bg-white/10"
-                      >
-                        Try again
-                      </button>
-                    )}
-                    {phase === "complete" && (
-                      <Link
-                        href="/history"
-                        className="flex-1 text-center rounded-lg border border-border bg-white/5 py-2 text-xs font-medium hover:bg-white/10"
-                      >
-                        View history
-                      </Link>
-                    )}
-                  </div>
-                </div>
               )}
             </div>
           </div>
