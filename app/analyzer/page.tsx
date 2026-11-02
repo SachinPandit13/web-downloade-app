@@ -14,6 +14,7 @@ import {
   Music,
   Video as VideoIcon,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ import {
 } from "@/src/lib/api";
 import type {
   AnalyzeResponse,
+  DownloadMode,
   SupportedOptionsResponse,
   VideoFormat,
 } from "@/src/lib/api";
@@ -52,6 +54,7 @@ function AnalyzerContent() {
   >("idle");
   const [quality, setQuality] = useState("1080p");
   const [format, setFormat] = useState<VideoFormat>("MP4");
+  const [mode, setMode] = useState<DownloadMode>("compatible");
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [video, setVideo] = useState<AnalyzeResponse | null>(null);
   const [options, setOptions] = useState<SupportedOptionsResponse | null>(null);
@@ -151,9 +154,10 @@ function AnalyzerContent() {
     setIsStarting(true);
     try {
       const result = await createDownload({
-        url: video.url,
+        url: url.trim() || video?.url || "",
         format,
         quality,
+        mode,
       });
       setJobId(result.job_id);
       setPhase("downloading");
@@ -164,7 +168,7 @@ function AnalyzerContent() {
     } finally {
       setIsStarting(false);
     }
-  }, [video, format, quality]);
+  }, [video, format, quality, mode]);
 
   const handleCancel = useCallback(async () => {
     try {
@@ -373,6 +377,66 @@ function AnalyzerContent() {
                   })}
                 </div>
               </div>
+
+              {!AUDIO_FORMATS.has(format) && (
+                <div className="glass rounded-2xl p-5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">
+                      Video Codec & Compatibility
+                    </h3>
+                    <span className="text-xs text-primary font-medium flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5" /> H.264 Universal Mode
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={phase === "downloading" || isStarting}
+                      onClick={() => {
+                        setMode("compatible");
+                        if (phase === "complete" || phase === "failed") {
+                          setPhase("ready");
+                        }
+                      }}
+                      className={`flex flex-col items-start p-3 rounded-xl border text-left transition cursor-pointer ${
+                        mode === "compatible"
+                          ? "border-primary bg-primary/15 text-foreground glow-primary"
+                          : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
+                      } disabled:opacity-50`}
+                    >
+                      <span className="text-xs font-semibold text-foreground">
+                        H.264 MP4 (Editor Ready)
+                      </span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                        Converts AV1/HEVC/VP9 to H.264 for Premiere & DaVinci
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={phase === "downloading" || isStarting}
+                      onClick={() => {
+                        setMode("original");
+                        if (phase === "complete" || phase === "failed") {
+                          setPhase("ready");
+                        }
+                      }}
+                      className={`flex flex-col items-start p-3 rounded-xl border text-left transition cursor-pointer ${
+                        mode === "original"
+                          ? "border-primary bg-primary/15 text-foreground glow-primary"
+                          : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
+                      } disabled:opacity-50`}
+                    >
+                      <span className="text-xs font-semibold text-foreground">
+                        Original Stream (Fastest)
+                      </span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                        Direct raw download (AV1 / VP9 / HEVC)
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {phase === "downloading" ? (
                 <div className="relative overflow-hidden rounded-xl border border-primary/40 bg-white/5 p-3 backdrop-blur-md">
