@@ -56,13 +56,13 @@ export default function RootLayout({
         className="min-h-full flex flex-col relative overflow-x-hidden"
         suppressHydrationWarning
       >
-        <ThemeProvider>
+        <ThemeProvider> {/*this is theme provider */}
           <div
             aria-hidden
             className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
           >
             <div className="absolute inset-x-0 top-0 h-[600px] bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--primary)_25%,transparent),transparent_60%)]" />
-            <Particles count={32} />
+            <Particles count={32} /> {/*this is particles component */}
           </div>
           <Navbar />
           <main className="flex-1 relative z-0">{children}</main>
