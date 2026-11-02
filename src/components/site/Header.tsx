@@ -8,8 +8,7 @@ import { ThemeToggle } from "@/src/components/ui";
 
 const links = [
   { to: "/", label: "Home" },
-  // { to: "/analyzer", label: "Analyzer" },
-  // { to: "/downloads", label: "Downloads" },
+  { to: "/converter", label: "Converter" },
   { to: "/history", label: "History" },
 ] as const;
 
