@@ -1,5 +1,6 @@
 export type DownloadStatus = "pending" | "processing" | "completed" | "failed";
 export type VideoFormat = "MP4" | "WEBM" | "MP3" | "AAC";
+export type DownloadMode = "original" | "compatible" | "editing";
 
 export type FormatOption = {
   format_id: string;
