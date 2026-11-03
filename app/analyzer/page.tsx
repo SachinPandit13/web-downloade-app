@@ -29,6 +29,7 @@ import type {
   AnalyzeResponse,
   DownloadMode,
   SupportedOptionsResponse,
+  VideoDetails,
   VideoFormat,
 } from "@/src/lib/api";
 import {
@@ -56,7 +57,7 @@ function AnalyzerContent() {
   const [format, setFormat] = useState<VideoFormat>("MP4");
   const [mode, setMode] = useState<DownloadMode>("compatible");
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [video, setVideo] = useState<AnalyzeResponse | null>(null);
+  const [video, setVideo] = useState<VideoDetails | null>(null);
   const [options, setOptions] = useState<SupportedOptionsResponse | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -105,20 +106,50 @@ function AnalyzerContent() {
       });
   }, []);
 
-  const qualities = useMemo(() => {
-    if (!options) return [];
-    return AUDIO_FORMATS.has(format)
-      ? options.audio_qualities
-      : options.video_qualities;
-  }, [options, format]);
-
   const formats = useMemo(() => {
+    if (video?.available_formats?.length) {
+      return video.available_formats as VideoFormat[];
+    }
     if (!options) return ["MP4", "WEBM", "MP3", "AAC"] as VideoFormat[];
     return [
       ...options.video_formats,
       ...options.audio_formats,
     ] as VideoFormat[];
-  }, [options]);
+  }, [options, video]);
+
+  useEffect(() => {
+    if (formats.length && !formats.includes(format)) {
+      setFormat(formats[0]);
+    }
+  }, [formats, format]);
+
+  const qualities = useMemo(() => {
+    if (AUDIO_FORMATS.has(format)) {
+      return options?.audio_qualities ?? ["128kbps", "192kbps", "320kbps"];
+    }
+    if (video?.qualities?.length) {
+      if (mode === "compatible") {
+        // In H.264 Universal Mode, show ONLY qualities where native H.264 is actually available
+        const h264Qualities = video.qualities
+          .filter((q) => q.has_native_h264 ?? !q.editing.requires_transcoding)
+          .map((q) => q.quality);
+        return h264Qualities.length > 0
+          ? h264Qualities
+          : video.qualities.map((q) => q.quality);
+      }
+      // In Original mode, show qualities actually available for the selected format container (MP4 vs WEBM)
+      const matchingQualities = video.qualities
+        .filter((q) => {
+          if (!q.available_formats?.length) return true;
+          return q.available_formats.includes(format);
+        })
+        .map((q) => q.quality);
+      return matchingQualities.length > 0
+        ? matchingQualities
+        : video.qualities.map((q) => q.quality);
+    }
+    return options?.video_qualities ?? [];
+  }, [options, format, mode, video]);
 
   useEffect(() => {
     if (qualities.length && !qualities.includes(quality)) {
@@ -137,7 +168,7 @@ function AnalyzerContent() {
 
     try {
       const result = await analyzeUrl(trimmed);
-      setVideo(result);
+      setVideo(result.video);
       setPhase("ready");
     } catch (err) {
       const message =
@@ -325,27 +356,39 @@ function AnalyzerContent() {
             <div className="space-y-5">
               <div className="glass rounded-2xl p-5">
                 <h3 className="text-sm font-semibold">Quality</h3>
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  {qualities.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      disabled={phase === "downloading" || isStarting}
-                      onClick={() => {
-                        setQuality(q);
-                        if (phase === "complete" || phase === "failed") {
-                          setPhase("ready");
-                        }
-                      }}
-                      className={`rounded-lg border px-2 py-2 text-xs font-mono transition ${
-                        quality === q
-                          ? "border-primary bg-primary/15 text-foreground glow-primary"
-                          : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
-                      } disabled:opacity-50`}
-                    >
-                      {q}
-                    </button>
-                  ))}
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {qualities.map((q) => {
+                    const qInfo = video?.qualities?.find((item) => item.quality === q);
+                    const sizeStr = mode === "compatible"
+                      ? (qInfo?.editing.size || (qInfo?.editing.estimated_size ? `~${qInfo.editing.estimated_size}` : null))
+                      : qInfo?.original.size;
+
+                    return (
+                      <button
+                        key={q}
+                        type="button"
+                        disabled={phase === "downloading" || isStarting}
+                        onClick={() => {
+                          setQuality(q);
+                          if (phase === "complete" || phase === "failed") {
+                            setPhase("ready");
+                          }
+                        }}
+                        className={`flex flex-col items-center justify-center rounded-lg border px-2 py-2 text-xs font-mono transition ${
+                          quality === q
+                            ? "border-primary bg-primary/15 text-foreground glow-primary"
+                            : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
+                        } disabled:opacity-50`}
+                      >
+                        <span className="font-semibold">{q}</span>
+                        {sizeStr && (
+                          <span className="text-[10px] text-muted-foreground mt-0.5 font-sans font-normal">
+                            {sizeStr}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
