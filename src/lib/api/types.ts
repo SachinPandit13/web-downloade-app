@@ -16,28 +16,13 @@ export type FormatOption = {
   note: string | null;
 };
 
-export type OriginalQualityInfo = {
+export type QualityOption = {
+  quality: string;
   codec: string;
   container: string;
   size: string | null;
-};
-
-export type EditingQualityInfo = {
-  available: boolean;
-  video_codec: string;
-  audio_codec: string;
-  requires_transcoding: boolean;
-  size: string | null;
-  estimated_size: string | null;
-};
-
-export type QualityOption = {
-  quality: string;
-  recommended: string;
-  original: OriginalQualityInfo;
-  editing: EditingQualityInfo;
-  available_formats?: string[];
-  has_native_h264?: boolean;
+  fps: number | null;
+  available_formats: string[];
 };
 
 export type VideoDetails = {
