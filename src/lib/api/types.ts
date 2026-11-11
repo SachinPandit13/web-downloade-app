@@ -16,22 +16,35 @@ export type FormatOption = {
   note: string | null;
 };
 
-export type AnalyzeResponse = {
-  url: string;
-  platform: string;
-  platform_name: string;
+export type QualityOption = {
+  quality: string;
+  codec: string;
+  container: string;
+  size: string | null;
+  fps: number | null;
+  available_formats: string[];
+};
+
+export type VideoDetails = {
+  url?: string | null;
   title: string;
-  channel: string | null;
-  channel_id: string | null;
-  channel_avatar: string | null;
-  thumbnail: string | null;
-  description: string | null;
-  duration_seconds: number | null;
-  upload_date: string | null;
-  view_count: number | null;
-  like_count: number | null;
-  is_live: boolean;
-  formats: FormatOption[];
+  thumbnail?: string | null;
+  duration?: number | null;
+  duration_seconds?: number | null;
+  channel?: string | null;
+  channel_id?: string | null;
+  channel_avatar?: string | null;
+  platform?: string | null;
+  platform_name?: string | null;
+  view_count?: number | null;
+  upload_date?: string | null;
+  description?: string | null;
+  available_formats?: string[];
+  qualities: QualityOption[];
+};
+
+export type AnalyzeResponse = {
+  video: VideoDetails;
 };
 
 export type SupportedOptionsResponse = {

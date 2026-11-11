@@ -14,7 +14,6 @@ import {
   Music,
   Video as VideoIcon,
   XCircle,
-  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -27,8 +26,8 @@ import {
 } from "@/src/lib/api";
 import type {
   AnalyzeResponse,
-  DownloadMode,
   SupportedOptionsResponse,
+  VideoDetails,
   VideoFormat,
 } from "@/src/lib/api";
 import {
@@ -54,9 +53,8 @@ function AnalyzerContent() {
   >("idle");
   const [quality, setQuality] = useState("1080p");
   const [format, setFormat] = useState<VideoFormat>("MP4");
-  const [mode, setMode] = useState<DownloadMode>("compatible");
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [video, setVideo] = useState<AnalyzeResponse | null>(null);
+  const [video, setVideo] = useState<VideoDetails | null>(null);
   const [options, setOptions] = useState<SupportedOptionsResponse | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -105,20 +103,40 @@ function AnalyzerContent() {
       });
   }, []);
 
-  const qualities = useMemo(() => {
-    if (!options) return [];
-    return AUDIO_FORMATS.has(format)
-      ? options.audio_qualities
-      : options.video_qualities;
-  }, [options, format]);
-
   const formats = useMemo(() => {
+    if (video?.available_formats?.length) {
+      return video.available_formats as VideoFormat[];
+    }
     if (!options) return ["MP4", "WEBM", "MP3", "AAC"] as VideoFormat[];
     return [
       ...options.video_formats,
       ...options.audio_formats,
     ] as VideoFormat[];
-  }, [options]);
+  }, [options, video]);
+
+  useEffect(() => {
+    if (formats.length && !formats.includes(format)) {
+      setFormat(formats[0]);
+    }
+  }, [formats, format]);
+
+  const qualities = useMemo(() => {
+    if (AUDIO_FORMATS.has(format)) {
+      return options?.audio_qualities ?? ["128kbps", "192kbps", "320kbps"];
+    }
+    if (video?.qualities?.length) {
+      const matchingQualities = video.qualities
+        .filter((q) => {
+          if (!q.available_formats?.length) return true;
+          return q.available_formats.includes(format);
+        })
+        .map((q) => q.quality);
+      return matchingQualities.length > 0
+        ? matchingQualities
+        : video.qualities.map((q) => q.quality);
+    }
+    return options?.video_qualities ?? [];
+  }, [options, format, video]);
 
   useEffect(() => {
     if (qualities.length && !qualities.includes(quality)) {
@@ -137,7 +155,7 @@ function AnalyzerContent() {
 
     try {
       const result = await analyzeUrl(trimmed);
-      setVideo(result);
+      setVideo(result.video);
       setPhase("ready");
     } catch (err) {
       const message =
@@ -157,7 +175,6 @@ function AnalyzerContent() {
         url: url.trim() || video?.url || "",
         format,
         quality,
-        mode,
       });
       setJobId(result.job_id);
       setPhase("downloading");
@@ -168,7 +185,7 @@ function AnalyzerContent() {
     } finally {
       setIsStarting(false);
     }
-  }, [video, format, quality, mode]);
+  }, [video, format, quality]);
 
   const handleCancel = useCallback(async () => {
     try {
@@ -325,27 +342,37 @@ function AnalyzerContent() {
             <div className="space-y-5">
               <div className="glass rounded-2xl p-5">
                 <h3 className="text-sm font-semibold">Quality</h3>
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  {qualities.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      disabled={phase === "downloading" || isStarting}
-                      onClick={() => {
-                        setQuality(q);
-                        if (phase === "complete" || phase === "failed") {
-                          setPhase("ready");
-                        }
-                      }}
-                      className={`rounded-lg border px-2 py-2 text-xs font-mono transition ${
-                        quality === q
-                          ? "border-primary bg-primary/15 text-foreground glow-primary"
-                          : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
-                      } disabled:opacity-50`}
-                    >
-                      {q}
-                    </button>
-                  ))}
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {qualities.map((q) => {
+                    const qInfo = video?.qualities?.find((item) => item.quality === q);
+                    const sizeStr = qInfo?.size || null;
+
+                    return (
+                      <button
+                        key={q}
+                        type="button"
+                        disabled={phase === "downloading" || isStarting}
+                        onClick={() => {
+                          setQuality(q);
+                          if (phase === "complete" || phase === "failed") {
+                            setPhase("ready");
+                          }
+                        }}
+                        className={`flex flex-col items-center justify-center rounded-lg border px-2 py-2 text-xs font-mono transition ${
+                          quality === q
+                            ? "border-primary bg-primary/15 text-foreground glow-primary"
+                            : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
+                        } disabled:opacity-50`}
+                      >
+                        <span className="font-semibold">{q}</span>
+                        {sizeStr && (
+                          <span className="text-[10px] text-muted-foreground mt-0.5 font-sans font-normal">
+                            {sizeStr}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -378,65 +405,6 @@ function AnalyzerContent() {
                 </div>
               </div>
 
-              {!AUDIO_FORMATS.has(format) && (
-                <div className="glass rounded-2xl p-5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">
-                      Video Codec & Compatibility
-                    </h3>
-                    <span className="text-xs text-primary font-medium flex items-center gap-1">
-                      <Sparkles className="h-3.5 w-3.5" /> H.264 Universal Mode
-                    </span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={phase === "downloading" || isStarting}
-                      onClick={() => {
-                        setMode("compatible");
-                        if (phase === "complete" || phase === "failed") {
-                          setPhase("ready");
-                        }
-                      }}
-                      className={`flex flex-col items-start p-3 rounded-xl border text-left transition cursor-pointer ${
-                        mode === "compatible"
-                          ? "border-primary bg-primary/15 text-foreground glow-primary"
-                          : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
-                      } disabled:opacity-50`}
-                    >
-                      <span className="text-xs font-semibold text-foreground">
-                        H.264 MP4 (Editor Ready)
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                        Converts AV1/HEVC/VP9 to H.264 for Premiere & DaVinci
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={phase === "downloading" || isStarting}
-                      onClick={() => {
-                        setMode("original");
-                        if (phase === "complete" || phase === "failed") {
-                          setPhase("ready");
-                        }
-                      }}
-                      className={`flex flex-col items-start p-3 rounded-xl border text-left transition cursor-pointer ${
-                        mode === "original"
-                          ? "border-primary bg-primary/15 text-foreground glow-primary"
-                          : "border-border bg-white/5 text-muted-foreground hover:bg-white/10"
-                      } disabled:opacity-50`}
-                    >
-                      <span className="text-xs font-semibold text-foreground">
-                        Original Stream (Fastest)
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                        Direct raw download (AV1 / VP9 / HEVC)
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {phase === "downloading" ? (
                 <div className="relative overflow-hidden rounded-xl border border-primary/40 bg-white/5 p-3 backdrop-blur-md">

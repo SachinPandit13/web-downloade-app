@@ -122,7 +122,6 @@ export default function ConverterPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
-      <Header />
 
       <main className="flex-1 px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl space-y-8">

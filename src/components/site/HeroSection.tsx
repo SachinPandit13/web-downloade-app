@@ -15,7 +15,6 @@ import {
   Calendar,
   Music,
   Video as VideoIcon,
-  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -30,8 +29,8 @@ import {
 } from "@/src/lib/api";
 import type {
   AnalyzeResponse,
-  DownloadMode,
   SupportedOptionsResponse,
+  VideoDetails,
   VideoFormat,
 } from "@/src/lib/api";
 import {
@@ -56,9 +55,8 @@ export default function HeroSection() {
   >("idle");
   const [quality, setQuality] = useState("1080p");
   const [format, setFormat] = useState<VideoFormat>("MP4");
-  const [mode, setMode] = useState<DownloadMode>("compatible");
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [video, setVideo] = useState<AnalyzeResponse | null>(null);
+  const [video, setVideo] = useState<VideoDetails | null>(null);
   const [options, setOptions] = useState<SupportedOptionsResponse | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -102,20 +100,40 @@ export default function HeroSection() {
       });
   }, []);
 
-  const qualities = useMemo(() => {
-    if (!options) return [];
-    return AUDIO_FORMATS.has(format)
-      ? options.audio_qualities
-      : options.video_qualities;
-  }, [options, format]);
-
   const formats = useMemo(() => {
+    if (video?.available_formats?.length) {
+      return video.available_formats as VideoFormat[];
+    }
     if (!options) return ["MP4", "WEBM", "MP3", "AAC"] as VideoFormat[];
     return [
       ...options.video_formats,
       ...options.audio_formats,
     ] as VideoFormat[];
-  }, [options]);
+  }, [options, video]);
+
+  useEffect(() => {
+    if (formats.length && !formats.includes(format)) {
+      setFormat(formats[0]);
+    }
+  }, [formats, format]);
+
+  const qualities = useMemo(() => {
+    if (AUDIO_FORMATS.has(format)) {
+      return options?.audio_qualities ?? ["128kbps", "192kbps", "320kbps"];
+    }
+    if (video?.qualities?.length) {
+      const matchingQualities = video.qualities
+        .filter((q) => {
+          if (!q.available_formats?.length) return true;
+          return q.available_formats.includes(format);
+        })
+        .map((q) => q.quality);
+      return matchingQualities.length > 0
+        ? matchingQualities
+        : video.qualities.map((q) => q.quality);
+    }
+    return options?.video_qualities ?? [];
+  }, [options, format, video]);
 
   useEffect(() => {
     if (qualities.length && !qualities.includes(quality)) {
@@ -134,7 +152,7 @@ export default function HeroSection() {
 
     try {
       const result = await analyzeUrl(trimmed);
-      setVideo(result);
+      setVideo(result.video);
       setPhase("ready");
     } catch (err) {
       const message =
@@ -154,7 +172,6 @@ export default function HeroSection() {
         url: url.trim() || video?.url || "",
         format,
         quality,
-        mode,
       });
       setJobId(result.job_id);
       setPhase("downloading");
@@ -165,7 +182,7 @@ export default function HeroSection() {
     } finally {
       setIsStarting(false);
     }
-  }, [video, format, quality, mode]);
+  }, [video, format, quality]);
 
   const handleCancel = useCallback(async () => {
     try {
@@ -337,27 +354,37 @@ export default function HeroSection() {
                         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
                           Quality
                         </h3>
-                        <div className="grid grid-cols-4 gap-2">
-                          {qualities.map((q) => (
-                            <button
-                              key={q}
-                              type="button"
-                              disabled={phase === "downloading" || isStarting}
-                              onClick={() => {
-                                setQuality(q);
-                                if (phase === "complete" || phase === "failed") {
-                                  setPhase("ready");
-                                }
-                              }}
-                              className={`rounded-xl border py-2 text-xs font-mono font-semibold transition cursor-pointer ${
-                                quality === q
-                                  ? "border-primary bg-primary/15 text-foreground glow-primary"
-                                  : "border-border bg-foreground/5 text-muted-foreground hover:bg-foreground/10"
-                              } disabled:opacity-50`}
-                            >
-                              {q}
-                            </button>
-                          ))}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {qualities.map((q) => {
+                            const qInfo = video?.qualities?.find((item) => item.quality === q);
+                            const sizeStr = qInfo?.size || null;
+
+                            return (
+                              <button
+                                key={q}
+                                type="button"
+                                disabled={phase === "downloading" || isStarting}
+                                onClick={() => {
+                                  setQuality(q);
+                                  if (phase === "complete" || phase === "failed") {
+                                    setPhase("ready");
+                                  }
+                                }}
+                                className={`flex flex-col items-center justify-center rounded-xl border py-2 px-1 text-xs font-mono font-semibold transition cursor-pointer ${
+                                  quality === q
+                                    ? "border-primary bg-primary/15 text-foreground glow-primary"
+                                    : "border-border bg-foreground/5 text-muted-foreground hover:bg-foreground/10"
+                                } disabled:opacity-50`}
+                              >
+                                <span>{q}</span>
+                                {sizeStr && (
+                                  <span className="text-[10px] text-muted-foreground mt-0.5 font-sans font-normal">
+                                    {sizeStr}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -396,71 +423,6 @@ export default function HeroSection() {
                         </div>
                       </div>
 
-                      {!AUDIO_FORMATS.has(format) && (
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              Video Codec & Compatibility
-                            </h3>
-                            <span className="text-[10px] text-primary font-medium flex items-center gap-1">
-                              <Sparkles className="h-3 w-3" /> H.264 Universal Mode
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              disabled={phase === "downloading" || isStarting}
-                              onClick={() => {
-                                setMode("compatible");
-                                if (
-                                  phase === "complete" ||
-                                  phase === "failed"
-                                ) {
-                                  setPhase("ready");
-                                }
-                              }}
-                              className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                                mode === "compatible"
-                                  ? "border-primary bg-primary/15 text-foreground glow-primary"
-                                  : "border-border bg-foreground/5 text-muted-foreground hover:bg-foreground/10"
-                              } disabled:opacity-50`}
-                            >
-                              <span className="text-xs font-semibold flex items-center gap-1 text-foreground">
-                                H.264 MP4 (Editor Ready)
-                              </span>
-                              <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                                Converts AV1/HEVC/VP9 to H.264 for Premiere & DaVinci
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={phase === "downloading" || isStarting}
-                              onClick={() => {
-                                setMode("original");
-                                if (
-                                  phase === "complete" ||
-                                  phase === "failed"
-                                ) {
-                                  setPhase("ready");
-                                }
-                              }}
-                              className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                                mode === "original"
-                                  ? "border-primary bg-primary/15 text-foreground glow-primary"
-                                  : "border-border bg-foreground/5 text-muted-foreground hover:bg-foreground/10"
-                              } disabled:opacity-50`}
-                            >
-                              <span className="text-xs font-semibold text-foreground">
-                                Original Stream (Fastest)
-                              </span>
-                              <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                                Direct raw download (AV1 / VP9 / HEVC)
-                              </span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
 
                       <div className="pt-2">
                         <AnimatePresence mode="wait" initial={false}>
